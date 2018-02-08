@@ -1,6 +1,11 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package rqt_graphprofiler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+0.1.3 (2018-02-08)
+------------------
+* Added several changes to support PyQt5 and ROS Kinetic.
+* Changed visual layout to have variable width bands and horizontal node labels.
+* Increased the info on nodes and bands.
 
 0.1.2 (2014-10-17)
 ------------------
