@@ -1,8 +1,16 @@
-from python_qt_binding.QtCore import Qt, QMimeData, QPoint, QEvent
-from python_qt_binding.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
-from python_qt_binding.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
-from python_qt_binding.QtGui import QFontMetrics, QToolTip, QPixmap, QImage, QPolygon
-from python_qt_binding.QtCore import pyqtSignal as Signal
+import python_qt_binding
+import PyQt5
+
+
+#from python_qt_binding.QtCore import Qt, QMimeData, QPoint, QEvent
+#from python_qt_binding.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
+#from python_qt_binding.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
+#from python_qt_binding.QtGui import QFontMetrics, QToolTip, QPixmap, QImage, QPolygon
+#from python_qt_binding.QtCore import pyqtSignal as Signal
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QGraphicsWidget
 
 from diarc.snapkey import gen_snapkey, parse_snapkey
 from diarc.util import typecheck, TypedDict
@@ -328,7 +336,8 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
             mimeData = QMimeData()
             mimeData.setText(json.dumps({'band':self.altitude}))
             drag.setMimeData(mimeData)
-            drag.start()
+            #drag.start() #Obsolete in Qt5
+            drag.exec_(Qt.CopyAction | Qt.MoveAction)
 
     def paint(self,painter,option,widget):
         brush = QBrush()
@@ -356,6 +365,7 @@ class BlockContainer(SpacerContainer):
         self._adapter = parent.adapter()
         self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred))
         self.setMinimumWidth(15)
+        self.setPreferredWidth(50)
 
     def paint(self, painter, option, widget):
         painter.setPen(Qt.NoPen)
@@ -485,7 +495,13 @@ class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
     def set_attributes(self, attrs):
         typecheck(attrs, BlockItemAttributes, "attrs")
         self.copy_attributes(attrs)
-        self._middleSpacer.set_width(self.spacerwidth)
+        #self._middleSpacer.set_width(self.spacerwidth)
+        if self.label.index("CPU:") > 0:
+            elided = self.label[0:self.label.index("CPU:")]
+        else:
+            elided = self.label
+        twidth = len(elided)*12
+        self._middleSpacer.set_width(self.spacerwidth + twidth)
         self.update(self.rect())
 
     def release(self):
@@ -566,7 +582,8 @@ class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
             mimeData = QMimeData()
             mimeData.setText(json.dumps({'block': self.block_index}))
             drag.setMimeData(mimeData)
-            drag.start()
+            #drag.start() #Obsolete in Qt5
+            drag.exec_(Qt.CopyAction | Qt.MoveAction)
 
     def paint(self,painter,option,widget):
         border_pen = QPen()
@@ -613,15 +630,32 @@ class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
 #         return super(BlockItem, self).event(event)
 
         def paint(self,painter,option,widget):
-            painter.setPen(Qt.NoPen)
-            painter.drawRect(self.rect())
-            painter.setPen(self.blockItem.label_color)
-            painter.rotate(-90)
-            rect = self.rect()
+            #painter.setPen(Qt.NoPen)
+            #painter.drawRect(self.rect())
+            #painter.setPen(self.blockItem.label_color)
+            #painter.rotate(-90)
+            #rect = self.rect()
+            #fm = painter.fontMetrics()
+            #elided = fm.elidedText(self.blockItem.label, Qt.ElideRight, rect.height()-2)
             fm = painter.fontMetrics()
-            elided = fm.elidedText(self.blockItem.label, Qt.ElideRight, rect.height()-2)
-            twidth = fm.width(elided)
-            painter.drawText(-twidth-(rect.height()-twidth)/2,rect.width()-2,elided)
+            if self.blockItem.label <> None:
+                if self.blockItem.label.index("CPU:") > 0:
+                    elidedAux = self.blockItem.label[0:self.blockItem.label.index("CPU:")]
+                else:
+                    elidedAux = self.label
+                elided = self.blockItem.label
+            else:
+                elided = " "
+                elidedAux = " "
+            twidth = fm.width(elidedAux)
+            painter.setPen(Qt.NoPen)
+            rect = self.rect()
+            rect.setWidth(twidth)
+            painter.drawRect(rect)
+            painter.setPen(self.blockItem.label_color)
+            #painter.rotate(-90)
+            #painter.drawText(-twidth-(rect.height()-twidth)/2,rect.width()-2,elided,Qt.AlignCenter)
+            painter.drawText(rect,Qt.AlignCenter,elided)
 
     class HorizontalSpacer(QGraphicsWidget):
         def __init__(self,parent):
@@ -915,7 +949,8 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
             mimeData = QMimeData()
             mimeData.setText(json.dumps({'block': self.block_index,'container': self.container.strType(),'snap':self.snap_order}))
             drag.setMimeData(mimeData)
-            drag.start()
+            #drag.start() #Obsolete in Qt5
+            drag.exec_(Qt.CopyAction | Qt.MoveAction)
 
     def paint(self, painter, option, widget):
         # Paint background
@@ -1229,9 +1264,9 @@ class QtView(QGraphicsView, View):
         self.__set_snap_item_settings_signal.connect(self.layout_manager.set_snap_item_settings)
         self.__set_snap_item_attributes_signal.connect(self.layout_manager.set_snap_item_attributes)
         self.resize(1024,768)
-        QColor.setAllowX11ColorNames(True)
-        if not QColor.allowX11ColorNames():
-            rospy.logwarn("Coloring will not work properly")
+        #QColor.setAllowX11ColorNames(True)
+        #if not QColor.allowX11ColorNames():
+        #    rospy.logwarn("Coloring will not work properly")
         self.show()
 
     def update_view(self):
@@ -1290,7 +1325,10 @@ class QtView(QGraphicsView, View):
         """ Implements scrollwheel zooming """
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         scaleFactor = 1.15
-        if event.delta() > 0:
+        #delta = event.delta #Obsolete in Qt5
+        delta = event.angleDelta().y()/8
+        #if event.delta > 0: #Obsolete in Qt5
+        if delta >= 0 and delta <= 180:
             self.scale(scaleFactor, scaleFactor)
         else:
             self.scale(1.0/scaleFactor, 1.0/scaleFactor)

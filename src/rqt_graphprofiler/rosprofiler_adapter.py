@@ -304,12 +304,16 @@ class ROSProfileAdapter(BaseAdapter):
                 virt_mem_max.append(data.virt_mem_max)
             rsgNodes[node_name].num_threads = max(num_threads)
             rsgNodes[node_name].cpu_load_mean = np.mean(np.array(cpu_load_mean))
+            #rsgNodes[node_name].cpu_load_std = math.sqrt(sum(
+            #        [math.pow(sd, 2)/n for sd, n in zip(cpu_load_std, samples)]))
             rsgNodes[node_name].cpu_load_std = math.sqrt(sum(
-                    [math.pow(sd, 2)/n for sd, n in zip(cpu_load_std, samples)]))
+                    [math.pow(sd, 2)/(n if abs(n) > 0.00001 else 0.00001) for sd, n in zip(cpu_load_std, samples)]))
             rsgNodes[node_name].cpu_load_max = max(cpu_load_max)
             rsgNodes[node_name].virt_mem_mean = np.mean(np.array(virt_mem_mean))
+            #rsgNodes[node_name].virt_mem_std = math.sqrt(sum(
+            #        [math.pow(sd, 2)/n for sd, n in zip(virt_mem_std, samples)]))
             rsgNodes[node_name].virt_mem_std = math.sqrt(sum(
-                    [math.pow(sd, 2)/n for sd, n in zip(virt_mem_std, samples)]))
+                    [math.pow(sd, 2)/(n if abs(n) > 0.00001 else 0.00001) for sd, n in zip(virt_mem_std, samples)]))
             rsgNodes[node_name].virt_mem_max = max(virt_mem_max)
 
         # Process Topic Statistics Data
@@ -372,11 +376,55 @@ class ROSProfileAdapter(BaseAdapter):
         attrs.bgcolor = None
         attrs.border_color = "black"
         attrs.border_width = 5
-        attrs.label = block.vertex.name
+        #attrs.label = block.vertex.name
         attrs.tooltip_text = "Node:\t%s\nCPU:\t%d\nMEM:\t%s\nThreads:\t%d" % (block.vertex.name, block.vertex.cpu_load_mean, sizeof_fmt(block.vertex.virt_mem_mean), block.vertex.num_threads)
         attrs.label_color = "black"
 #         attrs.spacerwidth = block.vertex.
-        attrs.spacerwidth = 30
+        #attrs.spacerwidth = 30
+        #attrs.label = block.vertex.name
+        #attrs.label = "%s\nCPU: %d\nMEM: %s" % (block.vertex.name, block.vertex.cpu_load_mean, sizeof_fmt(block.vertex.virt_mem_mean))
+        toplen = len("%s" % (block.vertex.name))
+        cpulen = len("CPU: %d" % (block.vertex.cpu_load_mean))
+        memlen = len("MEM: %s" % (sizeof_fmt(block.vertex.virt_mem_mean)))
+        thrlen = len("Thr: %d" % (block.vertex.num_threads))
+        maxlen = toplen if toplen > cpulen else cpulen
+        maxlen = maxlen if maxlen > memlen else memlen
+        maxlen = maxlen if maxlen > thrlen else thrlen
+        toplen = maxlen - toplen
+        cpulen = maxlen - cpulen
+        memlen = maxlen - memlen
+        thrlen = maxlen - thrlen
+        topstr = "%s" % (block.vertex.name)
+        topstr = topstr.ljust(toplen)
+        cpustr = "CPU: %d" % (block.vertex.cpu_load_mean)
+        cpustr = cpustr.ljust(cpulen)
+        memstr = "MEM: %s" % (sizeof_fmt(block.vertex.virt_mem_mean))
+        memstr = memstr.ljust(memlen)
+        thrstr = "Thr: %d" % (block.vertex.num_threads)
+        thrstr = thrstr.ljust(thrlen)
+        attrs.label = "%s\n%s\n%s\n%s" % (topstr, cpustr, memstr, thrstr)
+        #attrs.width = 15
+        if block.vertex.virt_mem_mean > 1073741824:
+            attrs.spacerwidth = 180
+            attrs.width = 180
+        elif block.vertex.virt_mem_mean > 1048576*100:
+            attrs.spacerwidth = 160
+            attrs.width = 160
+        elif block.vertex.virt_mem_mean > 1048576*10:
+            attrs.spacerwidth = 140
+            attrs.width = 140
+        elif block.vertex.virt_mem_mean > 1048576:
+            attrs.spacerwidth = 120
+            attrs.width = 120
+        elif block.vertex.virt_mem_mean > 1024*100:
+            attrs.spacerwidth = 100
+            attrs.width = 100
+        elif block.vertex.virt_mem_mean > 1024*10:
+            attrs.spacerwidth = 80
+            attrs.width = 80
+        else:
+            attrs.spacerwidth = 50
+            attrs.width = 50
         return attrs
 
     def get_band_item_attributes(self, band_altitude):
@@ -386,9 +434,25 @@ class ROSProfileAdapter(BaseAdapter):
         attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
         attrs.border_color = "red"
         attrs.tooltip_text = "Topic:\t%s\nBw:\t%s/sec\nHz:\t%.1f" % (band.edge.name, sizeof_fmt(band.edge.bw), band.edge.hz)
-        attrs.label = band.edge.name
-        attrs.label_color = "white"
-        attrs.width = 15
+        #attrs.label = band.edge.name
+        #attrs.label_color = "white"
+        #attrs.width = 15
+        attrs.label = "%s, Bw: %s/sec, Hz: %.1f" % (band.edge.name, sizeof_fmt(band.edge.bw), band.edge.hz)
+        #attrs.width = 15
+        if band.edge.bw > 1073741824:
+            attrs.width = 130
+        elif band.edge.bw > 1048576*100:
+            attrs.width = 110
+        elif band.edge.bw > 1048576*10:
+            attrs.width = 90
+        elif band.edge.bw > 1048576:
+            attrs.width = 70
+        elif band.edge.bw > 1024*100:
+            attrs.width = 50
+        elif band.edge.bw > 1024*10:
+            attrs.width = 30
+        else:
+            attrs.width = 15
         return attrs
 
     def get_snap_item_attributes(self, snapkey):

@@ -1,5 +1,13 @@
-from python_qt_binding.QtCore import *
-from python_qt_binding.QtGui import *
+import python_qt_binding
+import PyQt5
+
+#from python_qt_binding.QtCore import *
+#from python_qt_binding.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QGraphicsWidget
+
 from diarc.util import *
 import sys
 import logging

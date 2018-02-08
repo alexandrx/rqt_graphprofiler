@@ -17,13 +17,20 @@ from __future__ import print_function
 import os
 import sys
 import logging
+import python_qt_binding
+import PyQt5
 
-from python_qt_binding.QtGui import QCheckBox
-from python_qt_binding.QtGui import QHBoxLayout
-from python_qt_binding.QtGui import QIcon
-from python_qt_binding.QtGui import QPushButton
-from python_qt_binding.QtGui import QVBoxLayout
-from python_qt_binding.QtGui import QWidget
+#from python_qt_binding.QtGui import QCheckBox
+#from python_qt_binding.QtGui import QHBoxLayout
+#from python_qt_binding.QtGui import QIcon
+#from python_qt_binding.QtGui import QPushButton
+#from python_qt_binding.QtGui import QVBoxLayout
+#from python_qt_binding.QtGui import QWidget
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5 import QtSvg
+
 
 from qt_gui.plugin import Plugin
 import rosprofiler_adapter
@@ -33,7 +40,7 @@ from diarc import qt_view
 from blacklist import BlacklistDialog
 
 TOPIC_BLACKLIST = ['/clock', '/topology', '/statistics']
-NODE_BLACKLIST = ['/rosout']
+NODE_BLACKLIST = ['/rosout', '/rosgrapher', '/rosprofiler_fe411d', '/rqt_gui_py_node_6307']
 
 # set this environment variable to enable diarc debug printing
 if 'DIARC_DEBUG' in os.environ:
@@ -82,10 +89,12 @@ class VisualizerWidget(QWidget):
         hide_disconnected_topics = QCheckBox("Hide Disconnected Topics")
         topic_blacklist_button = QPushButton("Topic Blacklist")
         node_blacklist_button = QPushButton("Node Blacklist")
+        save_svg_button = QPushButton("Save SVG")
 
         refresh_button.clicked.connect(self._refresh)
         topic_blacklist_button.clicked.connect(self._edit_topic_blacklist)
         node_blacklist_button.clicked.connect(self._edit_node_blacklist)
+        save_svg_button.clicked.connect(self._save_svg)
         auto_refresh_checkbox.setCheckState(2)
         auto_refresh_checkbox.stateChanged.connect(self._autorefresh_changed)
         hide_disconnected_topics.setCheckState(2)
@@ -97,6 +106,7 @@ class VisualizerWidget(QWidget):
         toolbar_layout.addWidget(hide_disconnected_topics)
         toolbar_layout.addWidget(topic_blacklist_button)
         toolbar_layout.addWidget(node_blacklist_button)
+        toolbar_layout.addWidget(save_svg_button)
         vbox.addLayout(toolbar_layout)
 
         # Initialize the Visualizer
@@ -119,6 +129,26 @@ class VisualizerWidget(QWidget):
         node_blacklist = BlacklistDialog.get_blacklist(values=nodes)
         self._adapter.set_node_quiet_list(node_blacklist)
         self._adapter.topology_update()
+
+    def _save_svg(self):
+        newPath, _filter = QFileDialog.getSaveFileName(self, "Save SVG", '', "SVG files (*.svg)")
+        
+        if newPath is "":
+            return
+        
+        path = newPath
+        generator = QtSvg.QSvgGenerator()
+        generator.setFileName(path)
+        rect = self.geometry()
+        generator.setSize(QSize(rect.width(), rect.height()))
+        generator.setViewBox(QRect(0, 0, rect.width(), rect.height()))
+        generator.setTitle("SVG Generator Example Drawing")
+        
+        painter = QPainter()
+        painter.begin(generator)
+        #self.paint(painter)
+        self._view.render(painter)
+        painter.end()
 
     def _autorefresh_changed(self, value):
         if value == 2:

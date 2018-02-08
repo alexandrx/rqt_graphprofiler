@@ -28,10 +28,42 @@ class BaseAdapter(Adapter):
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.border_width = 0
-        attrs.label = str(block_index)
+        #attrs.label = str(block_index)
 #         attrs.label_rotation = -90
         attrs.label_color = "red"
-        attrs.spacerwidth = 20
+        #attrs.spacerwidth = 20
+        block = self._topology.blocks[block_index]
+        #attrs.label = "%s\nCPU: %d\nMEM: %s" % (block.vertex.name, block.vertex.cpu_load_mean, sizeof_fmt(block.vertex.virt_mem_mean))
+        toplen = len("%s" % (block.vertex.name))
+        cpulen = len("CPU: %d" % (block.vertex.cpu_load_mean))
+        memlen = len("MEM: %s" % (sizeof_fmt(block.vertex.virt_mem_mean)))
+        maxlen = toplen if toplen > cpulen else cpulen
+        maxlen = maxlen if maxlen > memlen else memlen
+        toplen = maxlen - toplen
+        cpulen = maxlen - cpulen
+        memlen = maxlen - memlen
+        topstr = "%s" % (block.vertex.name)
+        topstr = topstr.ljust(toplen)
+        cpustr = "CPU: %d" % (block.vertex.cpu_load_mean)
+        cpustr = cpustr.ljust(cpulen)
+        memstr = "MEM: %s" % (sizeof_fmt(block.vertex.virt_mem_mean))
+        memstr = memstr.ljust(memlen)
+        attrs.label = "%s\n%s\n%s" % (topstr, cpustr, memstr)
+        #attrs.width = 15
+        if block.vertex.virt_mem_mean > 1073741824:
+            attrs.spacerwidth = 180
+        elif block.vertex.virt_mem_mean > 1048576*100:
+            attrs.spacerwidth = 160
+        elif block.vertex.virt_mem_mean > 1048576*10:
+            attrs.spacerwidth = 140
+        elif block.vertex.virt_mem_mean > 1048576:
+            attrs.spacerwidth = 120
+        elif block.vertex.virt_mem_mean > 1024*100:
+            attrs.spacerwidth = 100
+        elif block.vertex.virt_mem_mean > 1024*10:
+            attrs.spacerwidth = 80
+        else:
+            attrs.spacerwidth = 50
         return attrs
 
     def get_band_item_attributes(self, band_altitude):
@@ -39,9 +71,25 @@ class BaseAdapter(Adapter):
         attrs = BandItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
-        attrs.label = str(band_altitude)
+        band = self._topology.bands[band_altitude]
+        #attrs.label = str(band_altitude)
+        attrs.label = "%s, Bw: %s/sec, Hz: %.1f" % (band_altitude, sizeof_fmt(band.edge.bw), band.edge.hz)
         attrs.label_color = "red"
-        attrs.width = 15
+        #attrs.width = 15
+        if band.edge.bw > 1073741824:
+            attrs.width = 130
+        elif band.edge.bw > 1048576*100:
+            attrs.width = 110
+        elif band.edge.bw > 1048576*10:
+            attrs.width = 90
+        elif band.edge.bw > 1048576:
+            attrs.width = 70
+        elif band.edge.bw > 1024*100:
+            attrs.width = 50
+        elif band.edge.bw > 1024*10:
+            attrs.width = 30
+        else:
+            attrs.width = 15
         return attrs
 
     def get_snap_item_attributes(self, snapkey):
@@ -365,4 +413,9 @@ class BaseAdapter(Adapter):
 
         self._view.update_view()
 
-
+def sizeof_fmt(num):
+    # Taken from http://stackoverflow.com/a/1094933
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
